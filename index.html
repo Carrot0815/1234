@@ -735,6 +735,9 @@ body::before {
 }
 .post-img:hover { opacity: 0.9; }
 
+.clickable-user { cursor: pointer; transition: opacity 0.2s; }
+.clickable-user:hover { opacity: 0.8; }
+
 .post-actions {
   display: flex;
   align-items: center;
@@ -1205,6 +1208,31 @@ body::before {
       <div>還沒有任何貼文</div>
       <div style="margin-top:6px;font-size:0.8rem;">成為第一個分享的人吧</div>
     </div>
+  </div>
+</div>
+
+<!-- VIEW: USER PROFILE -->
+<div id="view-profile" class="view">
+  <div class="home-container">
+    <div class="newpost-header" style="margin-bottom: 20px;">
+      <button class="back-btn" onclick="showView('wall')">←</button>
+    </div>
+    <div class="profile-banner">
+      <img id="profile-avatar" class="profile-big-avatar" src="" alt="">
+      <div class="profile-info">
+        <div id="profile-nickname" class="profile-nickname"></div>
+        <div id="profile-id" class="profile-id"></div>
+        <div class="profile-stats">
+          <div class="stat-item">
+            <div id="profile-post-count" class="stat-num">0</div>
+            <div class="stat-label">貼文</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="section-title" style="margin-top: 28px;">他的貼文</div>
+    <div class="my-posts-list" id="profile-posts-list"></div>
   </div>
 </div>
 
@@ -1753,6 +1781,45 @@ function renderWall() {
   });
 }
 
+function showUserProfile(userId) {
+  const users = DB.getUsers();
+  const user = users.find(u => u.id === userId);
+  if (!user) {
+    showToast('找不到該使用者', 'error');
+    return;
+  }
+
+  // Update banner info
+  document.getElementById('profile-avatar').src = user.avatar;
+  document.getElementById('profile-nickname').textContent = user.nickname;
+  document.getElementById('profile-id').textContent = '@' + user.id;
+
+  // Render user posts
+  const posts = DB.getPosts().filter(p => p.userId === userId).sort((a,b) => b.timestamp - a.timestamp);
+  document.getElementById('profile-post-count').textContent = posts.length;
+
+  const list = document.getElementById('profile-posts-list');
+  list.innerHTML = '';
+  if (posts.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">🌙</div><div>這位使用者還沒有分享過任何貼文</div></div>`;
+  } else {
+    posts.forEach(p => {
+      // Re-use my-post-item styles, but without the delete button
+      const div = document.createElement('div');
+      div.className = 'my-post-item';
+      div.innerHTML = `
+        <div class="my-post-title">${escHtml(p.title)}</div>
+        <div class="my-post-preview">${escHtml(p.content)}</div>
+        ${p.image ? `<img class="my-post-thumb" src="${p.image}" alt="">` : ''}
+        <div class="my-post-meta">${formatTime(p.timestamp)} · ${(p.likes||[]).length} 個讚 · ${(p.comments||[]).length} 則留言</div>
+      `;
+      list.appendChild(div);
+    });
+  }
+
+  showView('profile');
+}
+
 function buildPostCard(post, idx) {
   const card = document.createElement('div');
   card.className = 'post-card';
@@ -1764,9 +1831,9 @@ function buildPostCard(post, idx) {
 
   card.innerHTML = `
     <div class="post-header">
-      <img class="post-avatar" src="${post.avatar}" alt="">
+      <img class="post-avatar clickable-user" src="${post.avatar}" alt="" onclick="showUserProfile('${post.userId}')">
       <div class="post-author">
-        <div class="post-author-name">${escHtml(post.nickname)}</div>
+        <div class="post-author-name clickable-user" onclick="showUserProfile('${post.userId}')">${escHtml(post.nickname)}</div>
         <div class="post-author-id">@${escHtml(post.userId)}</div>
       </div>
       <div class="post-time">${formatTime(post.timestamp)}</div>
@@ -1822,9 +1889,9 @@ function renderCommentList(postId, comments, cardEl) {
     const div = document.createElement('div');
     div.className = 'comment-item';
     div.innerHTML = `
-      <img class="comment-avatar" src="${c.avatar}" alt="">
+      <img class="comment-avatar clickable-user" src="${c.avatar}" alt="" onclick="showUserProfile('${c.userId}')">
       <div class="comment-bubble">
-        <div class="comment-author">${escHtml(c.nickname)}</div>
+        <div class="comment-author clickable-user" style="display: inline-block;" onclick="showUserProfile('${c.userId}')">${escHtml(c.nickname)}</div>
         <div class="comment-text">${escHtml(c.content)}</div>
         <div class="comment-time">${formatTime(c.timestamp)}</div>
       </div>
